@@ -5,7 +5,9 @@ Simple project management tools for small teams.
 ## Timesheet CLI
 
 Employees can log hours for projects using the `timesheet.py` script. The
-script uses a local SQLite database called `timesheet.db`.
+script uses a local SQLite database called `timesheet.db` in the script
+directory by default. You can specify a different path with the `--db`
+option.
 
 ### Setup
 

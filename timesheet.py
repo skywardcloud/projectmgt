@@ -1,6 +1,36 @@
 import sqlite3
 import argparse
-from datetime import date, datetime
+<<<<<< codex/add---db-argument-for-cli
+import os
+from datetime import date
+
+# Default database file path in the script directory
+DEFAULT_DB_FILE = os.path.join(os.path.dirname(__file__), 'timesheet.db')
+
+
+def init_db(db_file):
+    with sqlite3.connect(db_file) as conn:
+        cur = conn.cursor()
+        cur.execute('''CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        )''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        )''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS timesheets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_id INTEGER NOT NULL,
+            project_id INTEGER NOT NULL,
+            entry_date TEXT NOT NULL,
+            hours REAL NOT NULL,
+            FOREIGN KEY (employee_id) REFERENCES employees(id),
+            FOREIGN KEY (project_id) REFERENCES projects(id)
+        )''')
+        conn.commit()
+
+
 import sys
 import os
 from datetime import date
@@ -54,7 +84,9 @@ def get_or_create(cursor, table, name):
 
 
 def add_employee(args):
-    with connect_db() as conn:
+
+    with sqlite3.connect(args.db) as conn:
+
         cur = conn.cursor()
         try:
             get_or_create(cur, 'employees', args.name)
@@ -68,7 +100,9 @@ def add_employee(args):
 
 
 def add_project(args):
-    with connect_db() as conn:
+
+    with sqlite3.connect(args.db) as conn:
+    
         cur = conn.cursor()
         try:
             get_or_create(cur, 'projects', args.name)
@@ -82,6 +116,11 @@ def add_project(args):
 
 
 def log_time(args):
+<<<<<< codex/add---db-argument-for-cli
+<<<<<< codex/add---db-argument-for-cli
+    with sqlite3.connect(args.db) as conn:
+
+
     # Validate hours value
     if args.hours <= 0 or args.hours > 24:
         print('Hours must be greater than 0 and no more than 24.')
@@ -110,7 +149,7 @@ def log_time(args):
         )
         conn.commit()
         print('Time entry recorded')
-    with connect_db() as conn:
+   
         cur = conn.cursor()
         try:
             emp_id = get_or_create(cur, 'employees', args.employee)
@@ -127,7 +166,10 @@ def log_time(args):
 
 
 def report(args):
-    with connect_db() as conn:
+<<<<<< codex/add---db-argument-for-cli
+    with sqlite3.connect(args.db) as conn:
+
+
         cur = conn.cursor()
         params = [args.project]
         if args.summary == 'employee':
@@ -268,8 +310,13 @@ def delete_time(args):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simple timesheet tool')
-    parser.add_argument('--db', default=DB_FILE,
-                        help='Path to the SQLite database file')
+<<<<< codex/add---db-argument-for-cli
+    parser.add_argument(
+        '--db',
+        default=DEFAULT_DB_FILE,
+        help='path to the SQLite database file'
+    )
+
     sub = parser.add_subparsers(dest='cmd')
 
     sub_add_emp = sub.add_parser('add-employee', help='Add a new employee')
@@ -316,9 +363,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-    global DB_FILE
-    DB_FILE = args.db
-    init_db()
+<<<<< codex/add---db-argument-for-cli
+    init_db(args.db)
+
     if hasattr(args, 'func'):
         args.func(args)
     else:
