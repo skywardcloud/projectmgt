@@ -49,23 +49,32 @@ def init_db(db_file=None):
 
 
 def get_or_create(cursor, table, name):
+    """Return the id for the given name, inserting a new row if needed.
+
+    The function returns a tuple ``(id, created)`` where ``created`` is
+    ``True`` when a new row was inserted and ``False`` when an existing
+    row was found.  This allows callers to distinguish between the two
+    cases without relying on catching an ``IntegrityError``.
+    """
+
     cursor.execute(f"SELECT id FROM {table} WHERE name = ?", (name,))
     row = cursor.fetchone()
     if row:
-        return row[0]
+        return row[0], False
     cursor.execute(f"INSERT INTO {table}(name) VALUES(?)", (name,))
-    return cursor.lastrowid
+    return cursor.lastrowid, True
 
 
 def add_employee(args):
     with connect_db() as conn:
         cur = conn.cursor()
         try:
-            get_or_create(cur, 'employees', args.name)
-            conn.commit()
-            print(f"Employee '{args.name}' added")
-        except sqlite3.IntegrityError:
-            print(f"Employee '{args.name}' already exists")
+            _, created = get_or_create(cur, 'employees', args.name)
+            if created:
+                conn.commit()
+                print(f"Employee '{args.name}' added")
+            else:
+                print(f"Employee '{args.name}' already exists")
         except sqlite3.Error as e:
             print(f"Failed to add employee: {e}")
             sys.exit(1)
@@ -75,11 +84,12 @@ def add_project(args):
     with connect_db() as conn:
         cur = conn.cursor()
         try:
-            get_or_create(cur, 'projects', args.name)
-            conn.commit()
-            print(f"Project '{args.name}' added")
-        except sqlite3.IntegrityError:
-            print(f"Project '{args.name}' already exists")
+            _, created = get_or_create(cur, 'projects', args.name)
+            if created:
+                conn.commit()
+                print(f"Project '{args.name}' added")
+            else:
+                print(f"Project '{args.name}' already exists")
         except sqlite3.Error as e:
             print(f"Failed to add project: {e}")
             sys.exit(1)
@@ -106,8 +116,8 @@ def log_time(args):
 
     with connect_db() as conn:
         cur = conn.cursor()
-        emp_id = get_or_create(cur, 'employees', args.employee)
-        proj_id = get_or_create(cur, 'projects', args.project)
+        emp_id, _ = get_or_create(cur, 'employees', args.employee)
+        proj_id, _ = get_or_create(cur, 'projects', args.project)
         try:
             cur.execute(
                 'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) '

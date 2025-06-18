@@ -14,11 +14,11 @@ def add_employee(name):
     try:
         with timesheet.connect_db() as conn:
             cur = conn.cursor()
-            timesheet.get_or_create(cur, 'employees', name)
-            conn.commit()
-        return True, f"Employee '{name}' added"
-    except sqlite3.IntegrityError:
-        return False, f"Employee '{name}' already exists"
+            _, created = timesheet.get_or_create(cur, 'employees', name)
+            if created:
+                conn.commit()
+                return True, f"Employee '{name}' added"
+            return False, f"Employee '{name}' already exists"
     except sqlite3.Error as e:
         return False, f"Failed to add employee: {e}"
 
@@ -27,11 +27,11 @@ def add_project(name):
     try:
         with timesheet.connect_db() as conn:
             cur = conn.cursor()
-            timesheet.get_or_create(cur, 'projects', name)
-            conn.commit()
-        return True, f"Project '{name}' added"
-    except sqlite3.IntegrityError:
-        return False, f"Project '{name}' already exists"
+            _, created = timesheet.get_or_create(cur, 'projects', name)
+            if created:
+                conn.commit()
+                return True, f"Project '{name}' added"
+            return False, f"Project '{name}' already exists"
     except sqlite3.Error as e:
         return False, f"Failed to add project: {e}"
 
