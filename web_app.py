@@ -438,6 +438,45 @@ def manager_summary():
     )
 
 
+@app.route('/reports/productivity')
+def productivity_reports():
+    start = request.args.get('start')
+    end = request.args.get('end')
+    employee = request.args.get('employee')
+    project = request.args.get('project')
+
+    employees = fetch_employees()
+    projects = fetch_projects()
+
+    dist_labels, dist_hours = [], []
+    if employee:
+        data = timesheet.employee_work_distribution(employee, start, end)
+        dist_labels = [d[0] for d in data]
+        dist_hours = [d[1] for d in data]
+
+    top_labels, top_hours = [], []
+    data = timesheet.top_employees(project, start, end)
+    top_labels = [d[0] for d in data]
+    top_hours = [d[1] for d in data]
+
+    overworked = timesheet.overworked_employees(start, end)
+
+    return render_template(
+        'productivity_reports.html',
+        employees=employees,
+        projects=projects,
+        employee_selected=employee,
+        project_selected=project,
+        start=start,
+        end=end,
+        dist_labels=dist_labels,
+        dist_hours=dist_hours,
+        top_labels=top_labels,
+        top_hours=top_hours,
+        overworked=overworked,
+    )
+
+
 @app.route('/api/payroll')
 def payroll_api():
     """Return timesheet entries in JSON for payroll systems."""

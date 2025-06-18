@@ -375,6 +375,79 @@ def summary(args):
             print(' | '.join(labels) + f' | {hours}h')
 
 
+def employee_work_distribution(employee, start=None, end=None):
+    """Return list of (project, hours) tuples for the given employee."""
+    with connect_db() as conn:
+        cur = conn.cursor()
+        query = (
+            'SELECT p.name, SUM(t.hours) FROM timesheets t '
+            'JOIN employees e ON e.id = t.employee_id '
+            'JOIN projects p ON p.id = t.project_id '
+            'WHERE e.name = ?'
+        )
+        params = [employee]
+        if start:
+            query += ' AND t.entry_date >= ?'
+            params.append(start)
+        if end:
+            query += ' AND t.entry_date <= ?'
+            params.append(end)
+        query += ' GROUP BY p.name ORDER BY p.name'
+        cur.execute(query, params)
+        return cur.fetchall()
+
+
+def top_employees(project=None, start=None, end=None, limit=10):
+    """Return top employees by hours for the given project."""
+    with connect_db() as conn:
+        cur = conn.cursor()
+        query = (
+            'SELECT e.name, SUM(t.hours) as total FROM timesheets t '
+            'JOIN employees e ON e.id = t.employee_id '
+            'JOIN projects p ON p.id = t.project_id WHERE 1=1'
+        )
+        params = []
+        if project:
+            query += ' AND p.name = ?'
+            params.append(project)
+        if start:
+            query += ' AND t.entry_date >= ?'
+            params.append(start)
+        if end:
+            query += ' AND t.entry_date <= ?'
+            params.append(end)
+        query += ' GROUP BY e.name ORDER BY total DESC LIMIT ?'
+        params.append(limit)
+        cur.execute(query, params)
+        return cur.fetchall()
+
+
+def overworked_employees(start=None, end=None, threshold=9, days=3):
+    """Return list of employees with at least ``days`` entries over threshold."""
+    with connect_db() as conn:
+        cur = conn.cursor()
+        query = (
+            'SELECT e.name, t.entry_date, SUM(t.hours) FROM timesheets t '
+            'JOIN employees e ON e.id = t.employee_id WHERE 1=1'
+        )
+        params = []
+        if start:
+            query += ' AND t.entry_date >= ?'
+            params.append(start)
+        if end:
+            query += ' AND t.entry_date <= ?'
+            params.append(end)
+        query += ' GROUP BY e.name, t.entry_date HAVING SUM(t.hours) > ?'
+        params.append(threshold)
+        cur.execute(query, params)
+        rows = cur.fetchall()
+
+    counts = {}
+    for name, _date, _hours in rows:
+        counts[name] = counts.get(name, 0) + 1
+    return [name for name, cnt in counts.items() if cnt >= days]
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Simple timesheet tool')
     parser.add_argument('--db', default=DB_FILE,
@@ -413,6 +486,26 @@ def parse_args():
     sub_sum.add_argument('--start')
     sub_sum.add_argument('--end')
     sub_sum.set_defaults(func=summary)
+
+    sub_dist = sub.add_parser('emp-distribution', help='Employee work distribution')
+    sub_dist.add_argument('employee')
+    sub_dist.add_argument('--start')
+    sub_dist.add_argument('--end')
+    sub_dist.set_defaults(func=lambda a: print('\n'.join(f"{p} | {h}h" for p, h in employee_work_distribution(a.employee, a.start, a.end))))
+
+    sub_top = sub.add_parser('top-employees', help='Top employees by hours')
+    sub_top.add_argument('--project')
+    sub_top.add_argument('--start')
+    sub_top.add_argument('--end')
+    sub_top.add_argument('--limit', type=int, default=10)
+    sub_top.set_defaults(func=lambda a: print('\n'.join(f"{n} | {h}h" for n, h in top_employees(a.project, a.start, a.end, a.limit))))
+
+    sub_over = sub.add_parser('overworked', help='List employees consistently over threshold hours/day')
+    sub_over.add_argument('--start')
+    sub_over.add_argument('--end')
+    sub_over.add_argument('--threshold', type=float, default=9)
+    sub_over.add_argument('--days', type=int, default=3)
+    sub_over.set_defaults(func=lambda a: print('\n'.join(overworked_employees(a.start, a.end, a.threshold, a.days))))
 
     sub_upd = sub.add_parser('update', help='Update a time entry')
     sub_upd.add_argument('--id', type=int, help='Entry ID')
