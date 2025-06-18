@@ -1,31 +1,46 @@
 import sqlite3
 import argparse
+import sys
+import os
 from datetime import date
 
-DB_FILE = 'timesheet.db'
+DB_FILE = os.environ.get('TIMESHEET_DB', 'timesheet.db')
+
+
+def connect_db():
+    """Return a connection to the SQLite database or exit on failure."""
+    try:
+        return sqlite3.connect(DB_FILE)
+    except sqlite3.Error as e:
+        print(f"Could not open database '{DB_FILE}': {e}")
+        sys.exit(1)
 
 
 def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        cur = conn.cursor()
-        cur.execute('''CREATE TABLE IF NOT EXISTS employees (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
-        )''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
-        )''')
-        cur.execute('''CREATE TABLE IF NOT EXISTS timesheets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            employee_id INTEGER NOT NULL,
-            project_id INTEGER NOT NULL,
-            entry_date TEXT NOT NULL,
-            hours REAL NOT NULL,
-            FOREIGN KEY (employee_id) REFERENCES employees(id),
-            FOREIGN KEY (project_id) REFERENCES projects(id)
-        )''')
-        conn.commit()
+    try:
+        with connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute('''CREATE TABLE IF NOT EXISTS employees (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            )''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            )''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS timesheets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                employee_id INTEGER NOT NULL,
+                project_id INTEGER NOT NULL,
+                entry_date TEXT NOT NULL,
+                hours REAL NOT NULL,
+                FOREIGN KEY (employee_id) REFERENCES employees(id),
+                FOREIGN KEY (project_id) REFERENCES projects(id)
+            )''')
+            conn.commit()
+    except sqlite3.Error as e:
+        print(f"Database initialization failed: {e}")
+        sys.exit(1)
 
 
 def get_or_create(cursor, table, name):
@@ -38,7 +53,7 @@ def get_or_create(cursor, table, name):
 
 
 def add_employee(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with connect_db() as conn:
         cur = conn.cursor()
         try:
             get_or_create(cur, 'employees', args.name)
@@ -46,10 +61,13 @@ def add_employee(args):
             print(f"Employee '{args.name}' added")
         except sqlite3.IntegrityError:
             print(f"Employee '{args.name}' already exists")
+        except sqlite3.Error as e:
+            print(f"Failed to add employee: {e}")
+            sys.exit(1)
 
 
 def add_project(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with connect_db() as conn:
         cur = conn.cursor()
         try:
             get_or_create(cur, 'projects', args.name)
@@ -57,23 +75,30 @@ def add_project(args):
             print(f"Project '{args.name}' added")
         except sqlite3.IntegrityError:
             print(f"Project '{args.name}' already exists")
+        except sqlite3.Error as e:
+            print(f"Failed to add project: {e}")
+            sys.exit(1)
 
 
 def log_time(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with connect_db() as conn:
         cur = conn.cursor()
-        emp_id = get_or_create(cur, 'employees', args.employee)
-        proj_id = get_or_create(cur, 'projects', args.project)
-        cur.execute(
-            'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) VALUES (?, ?, ?, ?)',
-            (emp_id, proj_id, args.date, args.hours)
-        )
-        conn.commit()
-        print('Time entry recorded')
+        try:
+            emp_id = get_or_create(cur, 'employees', args.employee)
+            proj_id = get_or_create(cur, 'projects', args.project)
+            cur.execute(
+                'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) VALUES (?, ?, ?, ?)',
+                (emp_id, proj_id, args.date, args.hours)
+            )
+            conn.commit()
+            print('Time entry recorded')
+        except sqlite3.Error as e:
+            print(f"Failed to log time: {e}")
+            sys.exit(1)
 
 
 def report(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with connect_db() as conn:
         cur = conn.cursor()
         params = [args.project]
         if args.summary == 'employee':
@@ -89,6 +114,9 @@ def report(args):
                        JOIN projects p ON p.id = t.project_id
                        WHERE p.name = ?'''
         else:
+
+        try:
+
             query = '''SELECT p.name, e.name, t.entry_date, t.hours
                        FROM timesheets t
                        JOIN employees e ON e.id = t.employee_id
@@ -125,10 +153,33 @@ def report(args):
                 print(f"{entry_date} | {employee} | {hours}h")
                 total += hours
         print(f"Total hours for {args.project}: {total}")
+            params = [args.project]
+            if args.start:
+                query += ' AND t.entry_date >= ?'
+                params.append(args.start)
+            if args.end:
+                query += ' AND t.entry_date <= ?'
+                params.append(args.end)
+            query += ' ORDER BY t.entry_date, e.name'
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            if not rows:
+                print('No entries found')
+                return
+            total = 0
+            for project, employee, entry_date, hours in rows:
+                print(f"{entry_date} | {employee} | {hours}h")
+                total += hours
+            print(f"Total hours for {args.project}: {total}")
+        except sqlite3.Error as e:
+            print(f"Failed to run report: {e}")
+            sys.exit(1)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simple timesheet tool')
+    parser.add_argument('--db', default=DB_FILE,
+                        help='Path to the SQLite database file')
     sub = parser.add_subparsers(dest='cmd')
 
     sub_add_emp = sub.add_parser('add-employee', help='Add a new employee')
@@ -158,8 +209,10 @@ def parse_args():
 
 
 def main():
-    init_db()
     args = parse_args()
+    global DB_FILE
+    DB_FILE = args.db
+    init_db()
     if hasattr(args, 'func'):
         args.func(args)
     else:
