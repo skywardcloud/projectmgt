@@ -12,6 +12,9 @@ The home page links to a **User Master** form where administrators can create
 user accounts with details like email, department and role. Passwords are stored
 hashed for security.
 
+Project managers can view project hours at `/manager/summary`. The page shows a
+bar chart of the top 10 projects by total time and includes a date range filter.
+
 ```bash
 pip install flask
 python web_app.py
