@@ -1,9 +1,10 @@
 import sqlite3
 import argparse
 import sys
+import os
 from datetime import date
 
-DB_FILE = 'timesheet.db'
+DB_FILE = os.environ.get('TIMESHEET_DB', 'timesheet.db')
 
 
 def connect_db():
@@ -130,6 +131,8 @@ def report(args):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simple timesheet tool')
+    parser.add_argument('--db', default=DB_FILE,
+                        help='Path to the SQLite database file')
     sub = parser.add_subparsers(dest='cmd')
 
     sub_add_emp = sub.add_parser('add-employee', help='Add a new employee')
@@ -157,8 +160,10 @@ def parse_args():
 
 
 def main():
-    init_db()
     args = parse_args()
+    global DB_FILE
+    DB_FILE = args.db
+    init_db()
     if hasattr(args, 'func'):
         args.func(args)
     else:
