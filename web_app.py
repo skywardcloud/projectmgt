@@ -75,6 +75,67 @@ def fetch_managers():
         return []
 
 
+def fetch_employees():
+    """Return list of (id, name) for all employees."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id, name FROM employees ORDER BY name')
+            return cur.fetchall()
+    except sqlite3.Error:
+        return []
+
+
+def add_project_master(data):
+    """Insert a project_master record."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'SELECT 1 FROM project_master WHERE project_name = ?',
+                (data['project_name'],),
+            )
+            if cur.fetchone():
+                return False, 'Project name already exists'
+            cur.execute(
+                'SELECT 1 FROM project_master WHERE project_code = ?',
+                (data['project_code'],),
+            )
+            if cur.fetchone():
+                return False, 'Project code already exists'
+            cur.execute(
+                '''INSERT INTO project_master(
+                       project_name, project_code, client_name,
+                       start_date, end_date, description, manager_id,
+                       estimated_hours, status, billing_type,
+                       created_by, created_date
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (
+                    data['project_name'],
+                    data['project_code'],
+                    data.get('client_name'),
+                    data.get('start_date'),
+                    data.get('end_date'),
+                    data.get('description'),
+                    data.get('manager_id'),
+                    data.get('estimated_hours'),
+                    data.get('status'),
+                    data.get('billing_type'),
+                    data.get('created_by'),
+                    datetime.utcnow().isoformat(timespec='seconds'),
+                ),
+            )
+            pid = cur.lastrowid
+            cur.execute(
+                'UPDATE project_master SET project_id = ? WHERE id = ?',
+                (f"PROJ{pid:03d}", pid),
+            )
+            conn.commit()
+            return True, pid
+    except sqlite3.Error as e:
+        return False, f'Failed to add project: {e}'
+
+
 def add_user(data):
     """Insert a user record and return (success, message)."""
     try:
@@ -208,6 +269,64 @@ def project():
             if ok:
                 return redirect(url_for('project'))
     return render_template('project_form.html')
+
+
+@app.route('/project-master', methods=['GET', 'POST'])
+def project_master():
+    managers = fetch_managers()
+    employees = fetch_employees()
+    if request.method == 'POST':
+        form = request.form
+        data = {
+            'project_name': form.get('project_name', '').strip(),
+            'project_code': form.get('project_code', '').strip(),
+            'client_name': form.get('client_name', '').strip() or None,
+            'start_date': form.get('start_date') or None,
+            'end_date': form.get('end_date') or None,
+            'description': form.get('description', '').strip() or None,
+            'manager_id': form.get('manager_id') or None,
+            'estimated_hours': form.get('estimated_hours') or None,
+            'status': form.get('status', '').strip(),
+            'billing_type': form.get('billing_type', '').strip() or None,
+        }
+        errors = []
+        if not data['project_name']:
+            errors.append('Project name is required')
+        if not data['project_code']:
+            errors.append('Project code is required')
+        if (
+            data['start_date']
+            and data['end_date']
+            and data['start_date'] > data['end_date']
+        ):
+            errors.append('Start date must be before end date')
+        if not data['manager_id']:
+            errors.append('Project manager is required')
+        if not data['status']:
+            errors.append('Status is required')
+        if errors:
+            for e in errors:
+                flash(e, 'error')
+        else:
+            ok, result = add_project_master(data)
+            if ok:
+                project_id = result
+                assignees = request.form.getlist('assigned_employees')
+                with timesheet.connect_db() as conn:
+                    cur = conn.cursor()
+                    for uid in assignees:
+                        cur.execute(
+                            'INSERT OR IGNORE INTO project_assignments(project_id, user_id) VALUES (?, ?)',
+                            (project_id, uid),
+                        )
+                    conn.commit()
+                flash('Project created', 'success')
+                return redirect(url_for('project_master'))
+            else:
+                flash(result, 'error')
+    return render_template(
+        'project_master_form.html', managers=managers, employees=employees
+    )
 
 
 @app.route('/login', methods=['GET', 'POST'])
