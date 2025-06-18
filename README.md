@@ -4,9 +4,13 @@ Simple project management tools for small teams.
 
 ## Web Interface
 
-A minimal Flask application provides HTML forms for managing employees and
-projects. Install Flask and run the app with `python web_app.py` then open
+A minimal Flask application provides HTML forms for managing users, employees
+and projects. Install Flask and run the app with `python web_app.py` then open
 `http://localhost:5000` in your browser.
+
+The home page links to a **User Master** form where administrators can create
+user accounts with details like email, department and role. Passwords are stored
+hashed for security.
 
 ```bash
 pip install flask
