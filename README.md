@@ -132,3 +132,4 @@ python timesheet.py --db /path/to/my.db add-employee Alice
 * **Employee or project already exists** – The CLI prints an error if you try to add a duplicate entry. Use a different name or remove the existing record directly from the database.
 * **"No command given" message** – Make sure you specify one of the commands (`add-employee`, `add-project`, `log`, `report`, `update`, or `delete`). Run `python timesheet.py -h` to see available options.
 * **"No entries found" when generating a report** – Check that you logged time for the correct project and date range.
+* **"table timesheets has no column named remarks" error** – If you see this message, your database was created with an older version of the tool. Running any command will upgrade the database schema automatically.
