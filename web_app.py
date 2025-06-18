@@ -1,5 +1,15 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, flash
+from functools import wraps
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    session,
+)
+from datetime import date, datetime
 import timesheet
 
 app = Flask(__name__)
@@ -38,6 +48,44 @@ def add_project(name):
         return False, f"Failed to add project: {e}"
 
 
+def log_time_entry(employee, project, hours, entry_date):
+    """Insert a timesheet entry and return (success, message)."""
+    # Validation copied from timesheet.log_time
+    if hours <= 0 or hours > 24:
+        return False, 'Hours must be greater than 0 and no more than 24.'
+    if hours * 2 != int(hours * 2):
+        return False, 'Hours must be in 0.5 hour increments.'
+    try:
+        entry = datetime.strptime(entry_date, '%Y-%m-%d').date()
+    except ValueError:
+        return False, 'Date must be in YYYY-MM-DD format.'
+    if entry > date.today():
+        return False, 'Date cannot be in the future.'
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            emp_id, _ = timesheet.get_or_create(cur, 'employees', employee)
+            proj_id, _ = timesheet.get_or_create(cur, 'projects', project)
+            cur.execute(
+                'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) '
+                'VALUES (?, ?, ?, ?)',
+                (emp_id, proj_id, entry.isoformat(), hours),
+            )
+            conn.commit()
+            return True, 'Time entry recorded'
+    except sqlite3.Error as e:
+        return False, f'Failed to log time: {e}'
+
+
+def login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if 'employee' not in session:
+            return redirect(url_for('login'))
+        return func(*args, **kwargs)
+    return wrapper
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -69,6 +117,52 @@ def project():
             if ok:
                 return redirect(url_for('project'))
     return render_template('project_form.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name:
+            flash('Name is required', 'error')
+        else:
+            # Ensure employee exists
+            ok, msg = add_employee(name)
+            if not ok and 'already exists' not in msg:
+                flash(msg, 'error')
+                return render_template('login.html')
+            session['employee'] = name
+            return redirect(url_for('dashboard'))
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('employee', None)
+    return redirect(url_for('index'))
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html', employee=session['employee'])
+
+
+@app.route('/timesheet', methods=['GET', 'POST'])
+@login_required
+def timesheet_entry():
+    if request.method == 'POST':
+        project = request.form.get('project', '').strip()
+        hours = request.form.get('hours', type=float)
+        entry_date = request.form.get('entry_date', '')
+        if not project:
+            flash('Project name is required', 'error')
+        else:
+            ok, msg = log_time_entry(session['employee'], project, hours, entry_date)
+            flash(msg, 'success' if ok else 'error')
+            if ok:
+                return redirect(url_for('timesheet_entry'))
+    return render_template('timesheet_form.html')
 
 
 if __name__ == '__main__':

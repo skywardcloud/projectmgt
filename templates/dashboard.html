@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background:#eef; padding:40px; }
+        a.button { display:inline-block; padding:10px 15px; background:#007bff; color:white; text-decoration:none; border-radius:4px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome {{ employee }}</h1>
+    <p><a class="button" href="{{ url_for('timesheet_entry') }}">Timesheet Entry</a></p>
+    <p><a href="{{ url_for('logout') }}">Logout</a></p>
+</body>
+</html>

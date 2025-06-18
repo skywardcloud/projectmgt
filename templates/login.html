@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+    <title>Employee Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; background:#f0f0f0; }
+        .container { width:300px; margin:80px auto; padding:20px; background:#fff; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+        input[type=text], input[type=submit] { width:100%; padding:8px; margin-top:10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Login</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul>
+        {% for category, message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <form method="post">
+        <input type="text" name="name" placeholder="Employee Name" required>
+        <input type="submit" value="Login">
+    </form>
+</div>
+</body>
+</html>
