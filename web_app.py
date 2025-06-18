@@ -364,9 +364,9 @@ def login():
 
 @app.route('/logout')
 def logout():
-    session.pop('employee', None)
-    session.pop('role', None)
-    return redirect(url_for('index'))
+    """Clear the current session and return to the login page."""
+    session.clear()
+    return redirect(url_for('login'))
 
 
 @app.route('/dashboard')
