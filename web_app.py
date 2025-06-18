@@ -5,9 +5,11 @@ import timesheet
 app = Flask(__name__)
 app.secret_key = 'secret-key'
 
-@app.before_first_request
-def setup_db():
-    timesheet.init_db()
+# Initialize the database when the application starts.  Some minimal
+# Flask implementations used in this environment may not implement the
+# ``before_first_request`` decorator, so we invoke ``timesheet.init_db``
+# directly to ensure the database tables are created.
+timesheet.init_db()
 
 
 def add_employee(name):
