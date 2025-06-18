@@ -231,7 +231,7 @@ def project_summary(start=None, end=None):
     with timesheet.connect_db() as conn:
         cur = conn.cursor()
         query = (
-            'SELECT p.name, SUM(t.hours) FROM timesheets t '
+            'SELECT p.name, SUM(t.hours) AS total_hours FROM timesheets t '
             'JOIN projects p ON p.id = t.project_id WHERE 1=1'
         )
         params = []
@@ -241,7 +241,7 @@ def project_summary(start=None, end=None):
         if end:
             query += ' AND t.entry_date <= ?'
             params.append(end)
-        query += ' GROUP BY p.name ORDER BY p.name'
+        query += ' GROUP BY p.name ORDER BY total_hours DESC LIMIT 10'
         cur.execute(query, params)
         return cur.fetchall()
 
@@ -426,7 +426,16 @@ def manager_summary():
     start = request.args.get('start')
     end = request.args.get('end')
     data = project_summary(start, end)
-    return render_template('manager_summary.html', data=data, start=start, end=end)
+    labels = [row[0] for row in data]
+    hours = [row[1] for row in data]
+    return render_template(
+        'manager_summary.html',
+        data=data,
+        labels=labels,
+        hours=hours,
+        start=start,
+        end=end,
+    )
 
 
 @app.route('/api/payroll')
