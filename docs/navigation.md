@@ -35,7 +35,9 @@ The application groups menu links by user role. A sidebar or top bar can surface
 | `/project-overview` | PM view of project timelines and assignments. |
 | `/timesheet-approval` | PMs approve or reject submitted timesheets. |
 | `/team-utilization` | PMs review team workload. |
-| `/reports` | Admins generate or export reports. |
+| `/reports` | Landing page for all reports. |
+| `/reports/summary` | Project hours chart. |
+| `/reports/productivity` | Employee productivity charts. |
 | `/settings` | Configure cutoffs, working hours, and holidays. |
 
 ## Breadcrumbs and Tabs
