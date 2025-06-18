@@ -48,7 +48,18 @@ def add_project(name):
         return False, f"Failed to add project: {e}"
 
 
-def log_time_entry(employee, project, hours, entry_date):
+def fetch_projects():
+    """Return a list of all project names ordered alphabetically."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT name FROM projects ORDER BY name')
+            return [row[0] for row in cur.fetchall()]
+    except sqlite3.Error:
+        return []
+
+
+def log_time_entry(employee, project, hours, entry_date, remarks=None):
     """Insert a timesheet entry and return (success, message)."""
     # Validation copied from timesheet.log_time
     if hours <= 0 or hours > 24:
@@ -67,9 +78,9 @@ def log_time_entry(employee, project, hours, entry_date):
             emp_id, _ = timesheet.get_or_create(cur, 'employees', employee)
             proj_id, _ = timesheet.get_or_create(cur, 'projects', project)
             cur.execute(
-                'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) '
-                'VALUES (?, ?, ?, ?)',
-                (emp_id, proj_id, entry.isoformat(), hours),
+                'INSERT INTO timesheets(employee_id, project_id, entry_date, hours, remarks) '
+                'VALUES (?, ?, ?, ?, ?)',
+                (emp_id, proj_id, entry.isoformat(), hours, remarks),
             )
             conn.commit()
             return True, 'Time entry recorded'
@@ -152,17 +163,30 @@ def dashboard():
 @login_required
 def timesheet_entry():
     if request.method == 'POST':
-        project = request.form.get('project', '').strip()
-        hours = request.form.get('hours', type=float)
-        entry_date = request.form.get('entry_date', '')
-        if not project:
-            flash('Project name is required', 'error')
-        else:
-            ok, msg = log_time_entry(session['employee'], project, hours, entry_date)
+        projects = request.form.getlist('project[]')
+        hours_list = request.form.getlist('hours[]')
+        dates = request.form.getlist('entry_date[]')
+        remarks_list = request.form.getlist('remarks[]')
+        ok_all = True
+        for proj, hrs_str, dt, rem in zip(projects, hours_list, dates, remarks_list):
+            proj = proj.strip()
+            if not proj:
+                flash('Project name is required', 'error')
+                ok_all = False
+                continue
+            try:
+                hrs = float(hrs_str)
+            except (TypeError, ValueError):
+                flash('Invalid hours value', 'error')
+                ok_all = False
+                continue
+            ok, msg = log_time_entry(session['employee'], proj, hrs, dt, rem)
             flash(msg, 'success' if ok else 'error')
-            if ok:
-                return redirect(url_for('timesheet_entry'))
-    return render_template('timesheet_form.html')
+            if not ok:
+                ok_all = False
+        if ok_all:
+            return redirect(url_for('timesheet_entry'))
+    return render_template('timesheet_form.html', projects=fetch_projects(), today=date.today().isoformat())
 
 
 if __name__ == '__main__':

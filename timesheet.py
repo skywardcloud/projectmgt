@@ -39,6 +39,7 @@ def init_db(db_file=None):
                 project_id INTEGER NOT NULL,
                 entry_date TEXT NOT NULL,
                 hours REAL NOT NULL,
+                remarks TEXT,
                 FOREIGN KEY (employee_id) REFERENCES employees(id),
                 FOREIGN KEY (project_id) REFERENCES projects(id)
             )''')
@@ -114,15 +115,17 @@ def log_time(args):
         print('Date cannot be in the future.')
         return
 
+    remarks = getattr(args, 'remarks', None)
+
     with connect_db() as conn:
         cur = conn.cursor()
         emp_id, _ = get_or_create(cur, 'employees', args.employee)
         proj_id, _ = get_or_create(cur, 'projects', args.project)
         try:
             cur.execute(
-                'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) '
-                'VALUES (?, ?, ?, ?)',
-                (emp_id, proj_id, entry_date.isoformat(), args.hours)
+                'INSERT INTO timesheets(employee_id, project_id, entry_date, hours, remarks) '
+                'VALUES (?, ?, ?, ?, ?)',
+                (emp_id, proj_id, entry_date.isoformat(), args.hours, remarks)
             )
             conn.commit()
             print('Time entry recorded')
@@ -271,6 +274,7 @@ def parse_args():
     sub_log.add_argument('project')
     sub_log.add_argument('hours', type=float)
     sub_log.add_argument('--date', default=date.today().isoformat())
+    sub_log.add_argument('--remarks', help='Optional remarks')
     sub_log.set_defaults(func=log_time)
 
     sub_rep = sub.add_parser('report', help='Show hours for a project')
