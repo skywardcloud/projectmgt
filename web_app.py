@@ -255,9 +255,6 @@ def login_required(func):
     return wrapper
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 
 @app.route('/employee', methods=['GET', 'POST'])
@@ -347,6 +344,7 @@ def project_master():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
