@@ -33,3 +33,17 @@ python timesheet.py report "Awesome Project" --start 2023-01-01 --end 2023-01-31
 ```
 
 The report lists each entry and totals the hours for the selected period.
+
+Update or delete a time entry:
+
+```bash
+# update by id
+python timesheet.py update --id 1 --new-hours 4
+
+# or locate by employee, project and date
+python timesheet.py update --employee Alice --project "Awesome Project" \
+  --entry-date 2023-02-01 --new-date 2023-02-02
+
+# delete an entry
+python timesheet.py delete --id 1
+```
