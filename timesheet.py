@@ -1,12 +1,14 @@
 import sqlite3
 import argparse
+import os
 from datetime import date
 
-DB_FILE = 'timesheet.db'
+# Default database file path in the script directory
+DEFAULT_DB_FILE = os.path.join(os.path.dirname(__file__), 'timesheet.db')
 
 
-def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
+def init_db(db_file):
+    with sqlite3.connect(db_file) as conn:
         cur = conn.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +40,7 @@ def get_or_create(cursor, table, name):
 
 
 def add_employee(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect(args.db) as conn:
         cur = conn.cursor()
         try:
             get_or_create(cur, 'employees', args.name)
@@ -49,7 +51,7 @@ def add_employee(args):
 
 
 def add_project(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect(args.db) as conn:
         cur = conn.cursor()
         try:
             get_or_create(cur, 'projects', args.name)
@@ -60,7 +62,7 @@ def add_project(args):
 
 
 def log_time(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect(args.db) as conn:
         cur = conn.cursor()
         emp_id = get_or_create(cur, 'employees', args.employee)
         proj_id = get_or_create(cur, 'projects', args.project)
@@ -73,7 +75,7 @@ def log_time(args):
 
 
 def report(args):
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect(args.db) as conn:
         cur = conn.cursor()
         query = '''SELECT p.name, e.name, t.entry_date, t.hours
                    FROM timesheets t
@@ -102,6 +104,11 @@ def report(args):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Simple timesheet tool')
+    parser.add_argument(
+        '--db',
+        default=DEFAULT_DB_FILE,
+        help='path to the SQLite database file'
+    )
     sub = parser.add_subparsers(dest='cmd')
 
     sub_add_emp = sub.add_parser('add-employee', help='Add a new employee')
@@ -129,8 +136,8 @@ def parse_args():
 
 
 def main():
-    init_db()
     args = parse_args()
+    init_db(args.db)
     if hasattr(args, 'func'):
         args.func(args)
     else:
