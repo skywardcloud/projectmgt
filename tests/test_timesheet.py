@@ -89,6 +89,22 @@ class TimesheetTests(unittest.TestCase):
         self.assertIn('Alice', output)
         self.assertIn('Bob', output)
 
+    def test_summary_project_totals(self):
+        args = SimpleNamespace(employee='Alice', project='ProjA', hours=2.0, date='2023-01-01')
+        with redirect_stdout(io.StringIO()):
+            timesheet.log_time(args)
+        args = SimpleNamespace(employee='Bob', project='ProjA', hours=1.5, date='2023-01-02')
+        with redirect_stdout(io.StringIO()):
+            timesheet.log_time(args)
+
+        sum_args = SimpleNamespace(by='project', period=None, start=None, end=None)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            timesheet.summary(sum_args)
+        output = buf.getvalue()
+        self.assertIn('ProjA', output)
+        self.assertIn('3.5h', output)
+
 if __name__ == '__main__':
     unittest.main()
 

@@ -267,6 +267,63 @@ def delete_time(args):
         print(f'Entry {entry_id} deleted')
 
 
+def summary(args):
+    """Print aggregated hours grouped by project or employee."""
+    with connect_db() as conn:
+        cur = conn.cursor()
+
+        group_fields = []
+        selects = []
+
+        if args.by == 'project':
+            group_fields.append('p.name')
+            selects.append('p.name')
+        else:
+            group_fields.append('e.name')
+            selects.append('e.name')
+
+        if args.period == 'daily':
+            group_fields.append('t.entry_date')
+            selects.append('t.entry_date')
+        elif args.period == 'weekly':
+            group_fields.append("strftime('%Y-%W', t.entry_date)")
+            selects.append("strftime('%Y-%W', t.entry_date)")
+        elif args.period == 'monthly':
+            group_fields.append("strftime('%Y-%m', t.entry_date)")
+            selects.append("strftime('%Y-%m', t.entry_date)")
+
+        query = f"SELECT {', '.join(selects)}, SUM(t.hours) "
+        query += "FROM timesheets t JOIN employees e ON e.id = t.employee_id "
+        query += "JOIN projects p ON p.id = t.project_id WHERE 1=1"
+
+        params = []
+        if args.start:
+            query += ' AND t.entry_date >= ?'
+            params.append(args.start)
+        if args.end:
+            query += ' AND t.entry_date <= ?'
+            params.append(args.end)
+
+        if group_fields:
+            query += ' GROUP BY ' + ', '.join(group_fields)
+            query += ' ORDER BY ' + ', '.join(group_fields)
+
+        try:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+        except sqlite3.Error as e:
+            print(f"Failed to run summary: {e}")
+            sys.exit(1)
+
+        if not rows:
+            print('No entries found')
+            return
+
+        for row in rows:
+            *labels, hours = row
+            print(' | '.join(labels) + f' | {hours}h')
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Simple timesheet tool')
     parser.add_argument('--db', default=DB_FILE,
@@ -296,6 +353,15 @@ def parse_args():
     sub_rep.add_argument('--summary', choices=['employee', 'date'],
                          help='Show totals grouped by employee or date')
     sub_rep.set_defaults(func=report)
+
+    sub_sum = sub.add_parser('summary', help='Show aggregated hours')
+    sub_sum.add_argument('--by', choices=['project', 'employee'], default='project',
+                         help='Group totals by project or employee')
+    sub_sum.add_argument('--period', choices=['daily', 'weekly', 'monthly'],
+                         help='Break down results by time period')
+    sub_sum.add_argument('--start')
+    sub_sum.add_argument('--end')
+    sub_sum.set_defaults(func=summary)
 
     sub_upd = sub.add_parser('update', help='Update a time entry')
     sub_upd.add_argument('--id', type=int, help='Entry ID')

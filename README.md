@@ -99,6 +99,15 @@ Displays recorded entries for a project. Use `--start` and `--end` to limit the 
 python timesheet.py report "<project>" [--start YYYY-MM-DD] [--end YYYY-MM-DD] [--summary employee|date]
 ```
 
+#### `summary`
+
+Displays aggregated hours grouped by project or employee. Optional `--period`
+can break down results daily, weekly or monthly.
+
+```bash
+python timesheet.py summary --by project --period monthly --start 2023-01-01
+```
+
 #### `update`
 
 Updates an existing entry. Identify the entry by `--id` or by employee, project and date.
@@ -130,6 +139,6 @@ python timesheet.py --db /path/to/my.db add-employee Alice
 ### Troubleshooting
 
 * **Employee or project already exists** – The CLI prints an error if you try to add a duplicate entry. Use a different name or remove the existing record directly from the database.
-* **"No command given" message** – Make sure you specify one of the commands (`add-employee`, `add-project`, `log`, `report`, `update`, or `delete`). Run `python timesheet.py -h` to see available options.
+* **"No command given" message** – Make sure you specify one of the commands (`add-employee`, `add-project`, `log`, `report`, `summary`, `update`, or `delete`). Run `python timesheet.py -h` to see available options.
 * **"No entries found" when generating a report** – Check that you logged time for the correct project and date range.
 * **"table timesheets has no column named remarks" error** – If you see this message, your database was created with an older version of the tool. Running any command will upgrade the database schema automatically.
