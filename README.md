@@ -12,13 +12,13 @@ The home page links to a **User Master** form where administrators can create
 user accounts with details like email, department and role. Passwords are stored
 hashed for security.
 
-Project managers can view project hours at `/manager/summary`. The page shows a
-bar chart of the top 10 projects by total time and includes a date range filter.
-
-There is also a **Productivity Reports** page at `/reports/productivity` which
-visualizes how employees spend time across projects and highlights top
-contributors. Overworked employees (more than 9 hours logged per day on multiple
-occasions) are flagged in a separate list.
+Project managers can view project hours using the **Reports** menu. The Project
+Summary at `/reports/summary` shows a bar chart of the top 10 projects by total
+time with an optional date range filter. The **Productivity Reports** page at
+`/reports/productivity` visualizes how employees spend time across projects and
+highlights top contributors. Overworked employees (more than 9 hours logged per
+day on multiple occasions) are flagged in a separate list. Access both pages
+from the landing page at `/reports`.
 
 ```bash
 pip install flask

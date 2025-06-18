@@ -421,7 +421,14 @@ def dashboard():
     return render_template('dashboard.html', employee=session['employee'], role=role, **context)
 
 
+@app.route('/reports')
+def reports_home():
+    """Landing page listing available reports."""
+    return render_template('reports.html')
+
+
 @app.route('/manager/summary')
+@app.route('/reports/summary')
 def manager_summary():
     start = request.args.get('start')
     end = request.args.get('end')

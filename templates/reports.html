@@ -1,0 +1,9 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h3 class="mb-4">Reports</h3>
+<ul class="list-unstyled">
+  <li><a href="{{ url_for('manager_summary') }}">Project Summary</a></li>
+  <li><a href="{{ url_for('productivity_reports') }}">Productivity Reports</a></li>
+</ul>
+{% endblock %}
