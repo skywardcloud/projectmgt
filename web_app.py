@@ -9,7 +9,7 @@ from flask import (
     flash,
     session,
 )
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from werkzeug.security import generate_password_hash
 import timesheet
 
@@ -333,6 +333,7 @@ def project_master():
 def login():
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
+        role = request.form.get('role', 'Employee')
         if not name:
             flash('Name is required', 'error')
         else:
@@ -342,6 +343,7 @@ def login():
                 flash(msg, 'error')
                 return render_template('login.html')
             session['employee'] = name
+            session['role'] = role
             return redirect(url_for('dashboard'))
     return render_template('login.html')
 
@@ -349,13 +351,60 @@ def login():
 @app.route('/logout')
 def logout():
     session.pop('employee', None)
+    session.pop('role', None)
     return redirect(url_for('index'))
 
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html', employee=session['employee'])
+    role = session.get('role', 'Employee')
+    today = date.today().isoformat()
+    with timesheet.connect_db() as conn:
+        cur = conn.cursor()
+
+        if role == 'Admin':
+            cur.execute('SELECT COUNT(*) FROM projects')
+            projects = cur.fetchone()[0]
+            cur.execute('SELECT COUNT(*) FROM employees')
+            employees = cur.fetchone()[0]
+            cur.execute('SELECT COUNT(*) FROM timesheets WHERE entry_date = ?', (today,))
+            today_entries = cur.fetchone()[0]
+            totals = dict(projects=projects, employees=employees,
+                          today_entries=today_entries, pending_approvals=0)
+            context = dict(totals=totals)
+
+        elif role == 'Project Manager':
+            cur.execute('SELECT COUNT(*) FROM project_master')
+            projects_managed = cur.fetchone()[0]
+            cur.execute('SELECT COUNT(*) FROM timesheets WHERE entry_date = ?', (today,))
+            employee_submissions = cur.fetchone()[0]
+            cur.execute('SELECT COUNT(*) FROM timesheets WHERE hours > 8 AND entry_date = ?', (today,))
+            review_alerts = cur.fetchone()[0]
+            chart_data = project_summary()
+            context = dict(manager=dict(projects_managed=projects_managed,
+                                       employee_submissions=employee_submissions,
+                                       review_alerts=review_alerts,
+                                       chart_data=chart_data))
+        else:
+            cur.execute('SELECT name FROM projects ORDER BY name')
+            assigned_projects = [r[0] for r in cur.fetchall()]
+            start_week = date.today() - timedelta(days=date.today().weekday())
+            cur.execute('''SELECT t.entry_date, SUM(t.hours)
+                           FROM timesheets t JOIN employees e ON e.id = t.employee_id
+                           WHERE e.name = ? AND t.entry_date >= ?
+                           GROUP BY t.entry_date ORDER BY t.entry_date''',
+                        (session['employee'], start_week.isoformat()))
+            week_entries = cur.fetchall()
+            cur.execute('''SELECT 1 FROM timesheets t JOIN employees e ON e.id = t.employee_id
+                           WHERE e.name = ? AND t.entry_date = ?''',
+                        (session['employee'], today))
+            submitted_today = cur.fetchone() is not None
+            context = dict(employee_view=dict(assigned_projects=assigned_projects,
+                                              week_entries=week_entries,
+                                              submitted_today=submitted_today))
+
+    return render_template('dashboard.html', employee=session['employee'], role=role, **context)
 
 
 @app.route('/manager/summary')
