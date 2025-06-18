@@ -1,5 +1,6 @@
 import sqlite3
 import argparse
+from datetime import date, datetime
 import sys
 import os
 from datetime import date
@@ -81,6 +82,34 @@ def add_project(args):
 
 
 def log_time(args):
+    # Validate hours value
+    if args.hours <= 0 or args.hours > 24:
+        print('Hours must be greater than 0 and no more than 24.')
+        return
+    if args.hours * 2 != int(args.hours * 2):
+        print('Hours must be in 0.5 hour increments.')
+        return
+
+    # Validate date format and ensure it's not in the future
+    try:
+        entry_date = datetime.strptime(args.date, '%Y-%m-%d').date()
+    except ValueError:
+        print('Date must be in YYYY-MM-DD format.')
+        return
+    if entry_date > date.today():
+        print('Date cannot be in the future.')
+        return
+
+    with sqlite3.connect(DB_FILE) as conn:
+        cur = conn.cursor()
+        emp_id = get_or_create(cur, 'employees', args.employee)
+        proj_id = get_or_create(cur, 'projects', args.project)
+        cur.execute(
+            'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) VALUES (?, ?, ?, ?)',
+            (emp_id, proj_id, entry_date.isoformat(), args.hours)
+        )
+        conn.commit()
+        print('Time entry recorded')
     with connect_db() as conn:
         cur = conn.cursor()
         try:
