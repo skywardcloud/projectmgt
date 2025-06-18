@@ -32,6 +32,14 @@ Generate a report for a project:
 python timesheet.py report "Awesome Project" --start 2023-01-01 --end 2023-01-31
 ```
 
+<<<<<< codex/add---summary-flag-for-total-hours-aggregation
+The report lists each entry and totals the hours for the selected period. Use
+`--summary` to group totals by employee or date:
+
+```bash
+python timesheet.py report "Awesome Project" --summary employee
+python timesheet.py report "Awesome Project" --summary date --start 2023-01-01 --end 2023-01-31
+```
 The report lists each entry and totals the hours for the selected period.
 
 ### Commands
@@ -97,3 +105,4 @@ python timesheet.py --db /path/to/my.db add-employee Alice
   -h` to see available options.
 * **"No entries found" when generating a report** – Check that you logged time
   for the correct project and date range.
+
