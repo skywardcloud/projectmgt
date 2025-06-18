@@ -1,0 +1,76 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<h3 class="mb-4">List of Users</h3>
+<form method="get" class="row g-3 mb-3" id="filters">
+  <div class="col-md-3">
+    <input type="text" name="q" id="search" value="{{ search }}" class="form-control" placeholder="Search name or email">
+  </div>
+  <div class="col-md-2">
+    <select name="department" class="form-select" onchange="this.form.submit()">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d }}" {% if d == selected_department %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="role" class="form-select" onchange="this.form.submit()">
+      <option value="">All Roles</option>
+      {% for r in roles %}
+      <option value="{{ r }}" {% if r == selected_role %}selected{% endif %}>{{ r }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="status" class="form-select" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {% if s == selected_status %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+<table class="table table-striped" id="users-table">
+  <thead>
+    <tr>
+      <th>Full Name</th>
+      <th>Email</th>
+      <th>Department</th>
+      <th>Role</th>
+      <th>Status</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.full_name }}</td>
+      <td>{{ u.email }}</td>
+      <td>{{ u.department }}</td>
+      <td>{{ u.role }}</td>
+      <td>{{ u.status }}</td>
+      <td>
+        <a href="{{ url_for('user_master') }}?id={{ u.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+        <a href="{{ url_for('deactivate_user', user_id=u.id) }}" class="btn btn-sm btn-outline-danger">Deactivate</a>
+        <a href="{{ url_for('view_profile', user_id=u.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<nav>
+  <ul class="pagination">
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="{{ url_for('users', page=p, q=search, department=selected_department, role=selected_role, status=selected_status) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+<script>
+document.getElementById('search').addEventListener('input', function(){
+  this.form.submit();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<h3 class="mb-4">{{ user.full_name }}</h3>
+<ul class="list-group mb-3">
+  <li class="list-group-item"><strong>Email:</strong> {{ user.email }}</li>
+  <li class="list-group-item"><strong>Department:</strong> {{ user.department }}</li>
+  <li class="list-group-item"><strong>Role:</strong> {{ user.role }}</li>
+  <li class="list-group-item"><strong>Status:</strong> {{ user.status }}</li>
+</ul>
+<a href="{{ url_for('users') }}" class="btn btn-secondary">Back to List</a>
+{% endblock %}

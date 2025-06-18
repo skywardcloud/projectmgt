@@ -86,6 +86,22 @@ def fetch_employees():
         return []
 
 
+def fetch_user_filter_options():
+    """Return distinct values for department, role and status from users."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT DISTINCT department FROM users ORDER BY department')
+            departments = [r[0] for r in cur.fetchall()]
+            cur.execute('SELECT DISTINCT role FROM users ORDER BY role')
+            roles = [r[0] for r in cur.fetchall()]
+            cur.execute('SELECT DISTINCT status FROM users ORDER BY status')
+            statuses = [r[0] for r in cur.fetchall()]
+        return departments, roles, statuses
+    except sqlite3.Error:
+        return [], [], []
+
+
 def add_project_master(data):
     """Insert a project_master record."""
     try:
@@ -543,6 +559,95 @@ def user_master():
             if ok:
                 return redirect(url_for('user_master'))
     return render_template('user_form.html', managers=managers)
+
+
+@app.route('/users')
+@login_required
+def users():
+    """Display a paginated list of users with filter and search options."""
+    page = int(request.args.get('page', 1))
+    search = request.args.get('q', '').strip()
+    department = request.args.get('department', '')
+    role = request.args.get('role', '')
+    status = request.args.get('status', '')
+
+    departments, roles, statuses = fetch_user_filter_options()
+
+    base = 'FROM users WHERE 1=1'
+    params = []
+    if department:
+        base += ' AND department = ?'
+        params.append(department)
+    if role:
+        base += ' AND role = ?'
+        params.append(role)
+    if status:
+        base += ' AND status = ?'
+        params.append(status)
+    if search:
+        base += ' AND (full_name LIKE ? OR email LIKE ?)'
+        params.extend([f'%{search}%', f'%{search}%'])
+
+    per_page = 10
+    with timesheet.connect_db() as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT COUNT(*) ' + base, params)
+        total = cur.fetchone()[0]
+
+        cur.execute(
+            'SELECT id, full_name, email, department, role, status ' + base +
+            ' ORDER BY full_name LIMIT ? OFFSET ?',
+            params + [per_page, (page - 1) * per_page]
+        )
+        rows = [
+            dict(id=r[0], full_name=r[1], email=r[2], department=r[3], role=r[4], status=r[5])
+            for r in cur.fetchall()
+        ]
+
+    total_pages = (total + per_page - 1) // per_page
+    return render_template(
+        'user_list.html',
+        users=rows,
+        page=page,
+        total_pages=total_pages,
+        search=search,
+        departments=departments,
+        roles=roles,
+        statuses=statuses,
+        selected_department=department,
+        selected_role=role,
+        selected_status=status,
+    )
+
+
+@app.route('/user/<int:user_id>/deactivate')
+@login_required
+def deactivate_user(user_id):
+    """Mark a user record as inactive."""
+    with timesheet.connect_db() as conn:
+        cur = conn.cursor()
+        cur.execute('UPDATE users SET status = ? WHERE id = ?', ('Inactive', user_id))
+        conn.commit()
+    flash('User deactivated', 'success')
+    return redirect(url_for('users'))
+
+
+@app.route('/user/<int:user_id>/profile')
+@login_required
+def view_profile(user_id):
+    """Simple profile page placeholder."""
+    with timesheet.connect_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT full_name, email, department, role, status FROM users WHERE id = ?',
+            (user_id,)
+        )
+        row = cur.fetchone()
+    if not row:
+        flash('User not found', 'error')
+        return redirect(url_for('users'))
+    user = dict(full_name=row[0], email=row[1], department=row[2], role=row[3], status=row[4])
+    return render_template('user_profile.html', user=user)
 
 
 @app.route('/timesheet', methods=['GET', 'POST'])
