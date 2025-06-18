@@ -75,28 +75,55 @@ def log_time(args):
 def report(args):
     with sqlite3.connect(DB_FILE) as conn:
         cur = conn.cursor()
-        query = '''SELECT p.name, e.name, t.entry_date, t.hours
-                   FROM timesheets t
-                   JOIN employees e ON e.id = t.employee_id
-                   JOIN projects p ON p.id = t.project_id
-                   WHERE p.name = ?'''
         params = [args.project]
+        if args.summary == 'employee':
+            query = '''SELECT e.name, SUM(t.hours)
+                       FROM timesheets t
+                       JOIN employees e ON e.id = t.employee_id
+                       JOIN projects p ON p.id = t.project_id
+                       WHERE p.name = ?'''
+        elif args.summary == 'date':
+            query = '''SELECT t.entry_date, SUM(t.hours)
+                       FROM timesheets t
+                       JOIN employees e ON e.id = t.employee_id
+                       JOIN projects p ON p.id = t.project_id
+                       WHERE p.name = ?'''
+        else:
+            query = '''SELECT p.name, e.name, t.entry_date, t.hours
+                       FROM timesheets t
+                       JOIN employees e ON e.id = t.employee_id
+                       JOIN projects p ON p.id = t.project_id
+                       WHERE p.name = ?'''
         if args.start:
             query += ' AND t.entry_date >= ?'
             params.append(args.start)
         if args.end:
             query += ' AND t.entry_date <= ?'
             params.append(args.end)
-        query += ' ORDER BY t.entry_date, e.name'
+        if args.summary == 'employee':
+            query += ' GROUP BY e.name ORDER BY e.name'
+        elif args.summary == 'date':
+            query += ' GROUP BY t.entry_date ORDER BY t.entry_date'
+        else:
+            query += ' ORDER BY t.entry_date, e.name'
         cur.execute(query, params)
         rows = cur.fetchall()
         if not rows:
             print('No entries found')
             return
         total = 0
-        for project, employee, entry_date, hours in rows:
-            print(f"{entry_date} | {employee} | {hours}h")
-            total += hours
+        if args.summary == 'employee':
+            for employee, hours in rows:
+                print(f"{employee} | {hours}h")
+                total += hours
+        elif args.summary == 'date':
+            for entry_date, hours in rows:
+                print(f"{entry_date} | {hours}h")
+                total += hours
+        else:
+            for project, employee, entry_date, hours in rows:
+                print(f"{entry_date} | {employee} | {hours}h")
+                total += hours
         print(f"Total hours for {args.project}: {total}")
 
 
@@ -123,6 +150,8 @@ def parse_args():
     sub_rep.add_argument('project')
     sub_rep.add_argument('--start')
     sub_rep.add_argument('--end')
+    sub_rep.add_argument('--summary', choices=['employee', 'date'],
+                         help='Show totals grouped by employee or date')
     sub_rep.set_defaults(func=report)
 
     return parser.parse_args()
