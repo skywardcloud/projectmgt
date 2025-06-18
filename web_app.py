@@ -10,6 +10,7 @@ from flask import (
     session,
 )
 from datetime import date, datetime
+from werkzeug.security import generate_password_hash
 import timesheet
 
 app = Flask(__name__)
@@ -57,6 +58,65 @@ def fetch_projects():
             return [row[0] for row in cur.fetchall()]
     except sqlite3.Error:
         return []
+
+
+def fetch_managers():
+    """Return list of (id, full_name) for active manager users."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, full_name FROM users "
+                "WHERE role IN ('Admin', 'Project Manager') "
+                "AND status = 'Active' ORDER BY full_name"
+            )
+            return cur.fetchall()
+    except sqlite3.Error:
+        return []
+
+
+def add_user(data):
+    """Insert a user record and return (success, message)."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT 1 FROM users WHERE email = ?', (data['email'],))
+            if cur.fetchone():
+                return False, 'Email already exists'
+            cur.execute(
+                'SELECT 1 FROM users WHERE username = ?', (data['username'],)
+            )
+            if cur.fetchone():
+                return False, 'Username already exists'
+            cur.execute(
+                '''INSERT INTO users(
+                    full_name, email, phone, username, password,
+                    department, designation, role, date_of_joining,
+                    status, reporting_manager
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (
+                    data['full_name'],
+                    data['email'],
+                    data.get('phone'),
+                    data['username'],
+                    generate_password_hash(data['password']),
+                    data['department'],
+                    data.get('designation'),
+                    data['role'],
+                    data.get('date_of_joining'),
+                    data['status'],
+                    data.get('reporting_manager'),
+                ),
+            )
+            user_id = cur.lastrowid
+            cur.execute(
+                'UPDATE users SET user_id = ? WHERE id = ?',
+                (f"USR{user_id:03d}", user_id),
+            )
+            conn.commit()
+            return True, 'User created'
+    except sqlite3.Error as e:
+        return False, f'Failed to add user: {e}'
 
 
 def log_time_entry(employee, project, hours, entry_date, remarks=None):
@@ -204,6 +264,48 @@ def payroll_api():
             for r in cur.fetchall()
         ]
     return {'entries': rows}
+
+
+@app.route('/user', methods=['GET', 'POST'])
+def user_master():
+    managers = fetch_managers()
+    if request.method == 'POST':
+        form = request.form
+        data = {
+            'full_name': form.get('full_name', '').strip(),
+            'email': form.get('email', '').strip(),
+            'phone': form.get('phone', '').strip() or None,
+            'username': form.get('username', '').strip(),
+            'password': form.get('password', ''),
+            'department': form.get('department', '').strip(),
+            'designation': form.get('designation', '').strip() or None,
+            'role': form.get('role', '').strip(),
+            'date_of_joining': form.get('date_of_joining') or None,
+            'status': form.get('status', 'Active'),
+            'reporting_manager': form.get('reporting_manager') or None,
+        }
+        errors = []
+        if not data['full_name']:
+            errors.append('Full name is required')
+        if not data['email']:
+            errors.append('Email is required')
+        if not data['username']:
+            errors.append('Username is required')
+        if not data['password']:
+            errors.append('Password is required')
+        if not data['department']:
+            errors.append('Department is required')
+        if not data['role']:
+            errors.append('Role is required')
+        if errors:
+            for e in errors:
+                flash(e, 'error')
+        else:
+            ok, msg = add_user(data)
+            flash(msg, 'success' if ok else 'error')
+            if ok:
+                return redirect(url_for('user_master'))
+    return render_template('user_form.html', managers=managers)
 
 
 @app.route('/timesheet', methods=['GET', 'POST'])

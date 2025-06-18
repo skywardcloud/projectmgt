@@ -38,6 +38,24 @@ def init_db(db_file=None):
                 )'''
             )
             cur.execute(
+                '''CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT UNIQUE,
+                    full_name TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    phone TEXT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    designation TEXT,
+                    role TEXT NOT NULL,
+                    date_of_joining TEXT,
+                    status TEXT NOT NULL,
+                    reporting_manager INTEGER,
+                    FOREIGN KEY (reporting_manager) REFERENCES users(id)
+                )'''
+            )
+            cur.execute(
                 '''CREATE TABLE IF NOT EXISTS timesheets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     employee_id INTEGER NOT NULL,
