@@ -2,6 +2,17 @@
 
 Simple project management tools for small teams.
 
+## Web Interface
+
+A minimal Flask application provides HTML forms for managing employees and
+projects. Install Flask and run the app with `python web_app.py` then open
+`http://localhost:5000` in your browser.
+
+```bash
+pip install flask
+python web_app.py
+```
+
 ## Timesheet CLI
 
 Employees can log hours for projects using the `timesheet.py` script. The script uses a local SQLite database called `timesheet.db` in the script directory by default. You can specify a different path with the `--db` option.
