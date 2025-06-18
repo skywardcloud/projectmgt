@@ -10,7 +10,7 @@ from flask import (
     session,
 )
 from datetime import date, datetime, timedelta
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 import timesheet
 
 app = Flask(__name__)
@@ -180,6 +180,23 @@ def add_user(data):
         return False, f'Failed to add user: {e}'
 
 
+def authenticate_user(email, password):
+    """Return dict with user info if credentials are valid."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'SELECT full_name, password, role FROM users WHERE email = ?',
+                (email,),
+            )
+            row = cur.fetchone()
+            if row and check_password_hash(row[1], password):
+                return {'name': row[0], 'role': row[2]}
+    except sqlite3.Error:
+        pass
+    return None
+
+
 def log_time_entry(employee, project, hours, entry_date, remarks=None):
     """Insert a timesheet entry and return (success, message)."""
     # Validation copied from timesheet.log_time
@@ -332,19 +349,18 @@ def project_master():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        role = request.form.get('role', 'Employee')
-        if not name:
-            flash('Name is required', 'error')
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        if not email or not password:
+            flash('Email and password are required', 'error')
         else:
-            # Ensure employee exists
-            ok, msg = add_employee(name)
-            if not ok and 'already exists' not in msg:
-                flash(msg, 'error')
-                return render_template('login.html')
-            session['employee'] = name
-            session['role'] = role
-            return redirect(url_for('dashboard'))
+            user = authenticate_user(email, password)
+            if user:
+                session['employee'] = user['name']
+                session['role'] = user['role']
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Invalid credentials', 'error')
     return render_template('login.html')
 
 
