@@ -29,7 +29,13 @@ class TimesheetTests(unittest.TestCase):
             cur = conn.cursor()
             cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
             tables = {row[0] for row in cur.fetchall()}
-        expected = {'employees', 'projects', 'timesheets'}
+        expected = {
+            'employees',
+            'projects',
+            'timesheets',
+            'project_master',
+            'project_assignments',
+        }
         self.assertTrue(expected.issubset(tables))
 
     def test_init_db_adds_missing_remarks_column(self):

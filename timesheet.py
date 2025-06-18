@@ -38,6 +38,39 @@ def init_db(db_file=None):
                 )'''
             )
             cur.execute(
+                '''CREATE TABLE IF NOT EXISTS project_master (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT UNIQUE,
+                    project_name TEXT UNIQUE NOT NULL,
+                    client_name TEXT,
+                    project_code TEXT UNIQUE NOT NULL,
+                    start_date TEXT,
+                    end_date TEXT,
+                    description TEXT,
+                    manager_id INTEGER,
+                    estimated_hours REAL,
+                    actual_hours REAL DEFAULT 0,
+                    status TEXT,
+                    billing_type TEXT,
+                    created_by INTEGER,
+                    created_date TEXT,
+                    modified_by INTEGER,
+                    modified_date TEXT,
+                    FOREIGN KEY (manager_id) REFERENCES users(id),
+                    FOREIGN KEY (created_by) REFERENCES users(id),
+                    FOREIGN KEY (modified_by) REFERENCES users(id)
+                )'''
+            )
+            cur.execute(
+                '''CREATE TABLE IF NOT EXISTS project_assignments (
+                    project_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    PRIMARY KEY (project_id, user_id),
+                    FOREIGN KEY (project_id) REFERENCES project_master(id),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )'''
+            )
+            cur.execute(
                 '''CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id TEXT UNIQUE,
