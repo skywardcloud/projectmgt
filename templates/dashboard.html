@@ -1,62 +1,77 @@
-<!doctype html>
-<html>
-<head>
-    <title>Dashboard</title>
-    <style>
-        body { font-family: Arial, sans-serif; background:#eef; padding:40px; }
-        .card { background:#fff; padding:15px; margin-bottom:15px; border-radius:5px; box-shadow:0 0 5px rgba(0,0,0,0.1); }
-        table { width:100%; border-collapse:collapse; }
-        th, td { padding:8px; text-align:left; border-bottom:1px solid #ddd; }
-        a.button { display:inline-block; padding:8px 12px; background:#007bff; color:white; text-decoration:none; border-radius:4px; }
-    </style>
-</head>
-<body>
-    <h1>Welcome {{ employee }} ({{ role }})</h1>
-
-    {% if role == 'Admin' %}
-    <div class="card">
-        <h2>Admin Overview</h2>
-        <p>Total Projects: {{ totals.projects }}</p>
-        <p>Total Employees: {{ totals.employees }}</p>
-        <p>Timesheets Submitted Today: {{ totals.today_entries }}</p>
-        <p>Pending Approvals: {{ totals.pending_approvals }}</p>
-        <p><a class="button" href="{{ url_for('project_master') }}">Create Project</a></p>
-        <p><a class="button" href="{{ url_for('user_master') }}">Create User</a></p>
+{% extends 'base_dashboard.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="row g-3">
+  {% if role == 'Admin' %}
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Total Projects</h5>
+        <p class="display-6">{{ totals.projects }}</p>
+      </div>
     </div>
-    {% elif role == 'Project Manager' %}
-    <div class="card">
-        <h2>Projects Managed</h2>
-        <p>{{ manager.projects_managed }}</p>
-        <p>Employee Submissions Today: {{ manager.employee_submissions }}</p>
-        <p>Timesheet Review Alerts: {{ manager.review_alerts }}</p>
-        <h3>Project Time Allocation</h3>
-        <table>
-            <tr><th>Project</th><th>Total Hours</th></tr>
-            {% for name, hrs in manager.chart_data %}
-            <tr><td>{{ name }}</td><td>{{ hrs }}</td></tr>
-            {% endfor %}
-        </table>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Total Employees</h5>
+        <p class="display-6">{{ totals.employees }}</p>
+      </div>
     </div>
-    {% else %}
-    <div class="card">
-        <h2>Your Projects</h2>
-        <ul>
-            {% for proj in employee_view.assigned_projects %}
-            <li>{{ proj }}</li>
-            {% endfor %}
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">Reports</h5>
+        <a href="#" class="btn btn-outline-primary mt-auto">Download</a>
+      </div>
+    </div>
+  </div>
+  {% elif role == 'Project Manager' %}
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Team Utilization</h5>
+        <p class="display-6">{{ manager.employee_submissions }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Pending Approvals</h5>
+        <p class="display-6">{{ manager.review_alerts }}</p>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Assigned Projects</h5>
+        <ul class="list-group list-group-flush">
+          {% for proj in employee_view.assigned_projects %}
+          <li class="list-group-item">{{ proj }}</li>
+          {% endfor %}
         </ul>
-        <h3>Timesheets This Week</h3>
-        <table>
-            <tr><th>Date</th><th>Hours</th></tr>
-            {% for dt, hrs in employee_view.week_entries %}
-            <tr><td>{{ dt }}</td><td>{{ hrs }}</td></tr>
-            {% endfor %}
-        </table>
-        <p>Submission Today: {{ 'Yes' if employee_view.submitted_today else 'No' }}</p>
-        <p><a class="button" href="{{ url_for('timesheet_entry') }}">Enter Timesheet</a></p>
+      </div>
     </div>
-    {% endif %}
-
-    <p><a href="{{ url_for('logout') }}">Logout</a></p>
-</body>
-</html>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Timesheets This Week</h5>
+        <table class="table table-sm">
+          <thead><tr><th>Date</th><th>Hours</th></tr></thead>
+          <tbody>
+          {% for dt, hrs in employee_view.week_entries %}
+          <tr><td>{{ dt }}</td><td>{{ hrs }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
