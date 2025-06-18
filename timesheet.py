@@ -18,31 +18,43 @@ def connect_db():
 
 
 def init_db(db_file=None):
-    """Create required tables in the database."""
+    """Create required tables in the database and upgrade schema if needed."""
     global DB_FILE
     if db_file:
         DB_FILE = db_file
     try:
         with connect_db() as conn:
             cur = conn.cursor()
-            cur.execute('''CREATE TABLE IF NOT EXISTS employees (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL
-            )''')
-            cur.execute('''CREATE TABLE IF NOT EXISTS projects (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL
-            )''')
-            cur.execute('''CREATE TABLE IF NOT EXISTS timesheets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                employee_id INTEGER NOT NULL,
-                project_id INTEGER NOT NULL,
-                entry_date TEXT NOT NULL,
-                hours REAL NOT NULL,
-                remarks TEXT,
-                FOREIGN KEY (employee_id) REFERENCES employees(id),
-                FOREIGN KEY (project_id) REFERENCES projects(id)
-            )''')
+            cur.execute(
+                '''CREATE TABLE IF NOT EXISTS employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL
+                )'''
+            )
+            cur.execute(
+                '''CREATE TABLE IF NOT EXISTS projects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL
+                )'''
+            )
+            cur.execute(
+                '''CREATE TABLE IF NOT EXISTS timesheets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    employee_id INTEGER NOT NULL,
+                    project_id INTEGER NOT NULL,
+                    entry_date TEXT NOT NULL,
+                    hours REAL NOT NULL,
+                    remarks TEXT,
+                    FOREIGN KEY (employee_id) REFERENCES employees(id),
+                    FOREIGN KEY (project_id) REFERENCES projects(id)
+                )'''
+            )
+            # Ensure the remarks column exists for databases created
+            # with older versions of the schema.
+            cur.execute("PRAGMA table_info(timesheets)")
+            cols = [row[1] for row in cur.fetchall()]
+            if 'remarks' not in cols:
+                cur.execute('ALTER TABLE timesheets ADD COLUMN remarks TEXT')
             conn.commit()
     except sqlite3.Error as e:
         print(f"Database initialization failed: {e}")

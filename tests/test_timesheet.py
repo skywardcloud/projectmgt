@@ -32,6 +32,32 @@ class TimesheetTests(unittest.TestCase):
         expected = {'employees', 'projects', 'timesheets'}
         self.assertTrue(expected.issubset(tables))
 
+    def test_init_db_adds_missing_remarks_column(self):
+        """Older databases may not have the remarks column."""
+        with sqlite3.connect(self.db_path) as conn:
+            cur = conn.cursor()
+            cur.execute("DROP TABLE timesheets")
+            cur.execute(
+                '''CREATE TABLE timesheets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    employee_id INTEGER NOT NULL,
+                    project_id INTEGER NOT NULL,
+                    entry_date TEXT NOT NULL,
+                    hours REAL NOT NULL,
+                    FOREIGN KEY (employee_id) REFERENCES employees(id),
+                    FOREIGN KEY (project_id) REFERENCES projects(id)
+                )'''
+            )
+            conn.commit()
+
+        timesheet.init_db()
+
+        with sqlite3.connect(self.db_path) as conn:
+            cur = conn.cursor()
+            cur.execute("PRAGMA table_info(timesheets)")
+            cols = {row[1] for row in cur.fetchall()}
+        self.assertIn('remarks', cols)
+
     def test_log_time_records_entry(self):
         args = SimpleNamespace(employee='Alice', project='Proj', hours=2.0, date='2023-01-01')
         buf = io.StringIO()
