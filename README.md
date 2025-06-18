@@ -4,10 +4,7 @@ Simple project management tools for small teams.
 
 ## Timesheet CLI
 
-Employees can log hours for projects using the `timesheet.py` script. The
-script uses a local SQLite database called `timesheet.db` in the script
-directory by default. You can specify a different path with the `--db`
-option.
+Employees can log hours for projects using the `timesheet.py` script. The script uses a local SQLite database called `timesheet.db` in the script directory by default. You can specify a different path with the `--db` option.
 
 ### Setup
 
@@ -34,15 +31,12 @@ Generate a report for a project:
 python timesheet.py report "Awesome Project" --start 2023-01-01 --end 2023-01-31
 ```
 
-<<<<<< codex/add---summary-flag-for-total-hours-aggregation
-The report lists each entry and totals the hours for the selected period. Use
-`--summary` to group totals by employee or date:
+The report lists each entry and totals the hours for the selected period. Use `--summary` to group totals by employee or date:
 
 ```bash
 python timesheet.py report "Awesome Project" --summary employee
 python timesheet.py report "Awesome Project" --summary date --start 2023-01-01 --end 2023-01-31
 ```
-The report lists each entry and totals the hours for the selected period.
 
 Update or delete a time entry:
 
@@ -57,11 +51,10 @@ python timesheet.py update --employee Alice --project "Awesome Project" \
 # delete an entry
 python timesheet.py delete --id 1
 ```
-=======
+
 ### Commands
 
-Below is a summary of the available commands. Use `-h` with any command for
-help on its options.
+Below is a summary of the available commands. Use `-h` with any command for help on its options.
 
 #### `add-employee`
 
@@ -81,8 +74,7 @@ python timesheet.py add-project "<project name>"
 
 #### `log`
 
-Records hours for an employee on a project. The date defaults to today and can
-be overridden with the `--date` option (format: `YYYY-MM-DD`).
+Records hours for an employee on a project. The date defaults to today and can be overridden with the `--date` option (format: `YYYY-MM-DD`).
 
 ```bash
 python timesheet.py log <employee> "<project>" <hours> [--date YYYY-MM-DD]
@@ -90,18 +82,31 @@ python timesheet.py log <employee> "<project>" <hours> [--date YYYY-MM-DD]
 
 #### `report`
 
-Displays all recorded entries for a project. Use `--start` and `--end` to limit
-the date range.
+Displays recorded entries for a project. Use `--start` and `--end` to limit the date range. Totals can be grouped with `--summary employee` or `--summary date`.
 
 ```bash
-python timesheet.py report "<project>" [--start YYYY-MM-DD] [--end YYYY-MM-DD]
+python timesheet.py report "<project>" [--start YYYY-MM-DD] [--end YYYY-MM-DD] [--summary employee|date]
+```
+
+#### `update`
+
+Updates an existing entry. Identify the entry by `--id` or by employee, project and date.
+
+```bash
+python timesheet.py update --id <entry id> --new-hours <hours>
+```
+
+#### `delete`
+
+Deletes a time entry by `--id` or by employee/project/date.
+
+```bash
+python timesheet.py delete --id <entry id>
 ```
 
 ### Database location
 
-By default the CLI stores data in a file named `timesheet.db` located in the
-current working directory. You can change this location by either setting the
-`TIMESHEET_DB` environment variable or using the global `--db` option:
+By default the CLI stores data in a file named `timesheet.db` located in the current working directory. You can change this location by either setting the `TIMESHEET_DB` environment variable or using the global `--db` option:
 
 ```bash
 # Use an environment variable
@@ -113,12 +118,6 @@ python timesheet.py --db /path/to/my.db add-employee Alice
 
 ### Troubleshooting
 
-* **Employee or project already exists** – The CLI prints an error if you try to
-  add a duplicate entry. Use a different name or remove the existing record
-  directly from the database.
-* **"No command given" message** – Make sure you specify one of the commands
-  (`add-employee`, `add-project`, `log`, or `report`). Run `python timesheet.py
-  -h` to see available options.
-* **"No entries found" when generating a report** – Check that you logged time
-  for the correct project and date range.
-
+* **Employee or project already exists** – The CLI prints an error if you try to add a duplicate entry. Use a different name or remove the existing record directly from the database.
+* **"No command given" message** – Make sure you specify one of the commands (`add-employee`, `add-project`, `log`, `report`, `update`, or `delete`). Run `python timesheet.py -h` to see available options.
+* **"No entries found" when generating a report** – Check that you logged time for the correct project and date range.
