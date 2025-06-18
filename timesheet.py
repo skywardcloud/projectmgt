@@ -1,5 +1,6 @@
 import sqlite3
 import argparse
+<<<<<< codex/add---db-argument-for-cli
 import os
 from datetime import date
 
@@ -28,6 +29,7 @@ def init_db(db_file):
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )''')
         conn.commit()
+
 
 import sys
 import os
@@ -115,8 +117,39 @@ def add_project(args):
 
 def log_time(args):
 <<<<<< codex/add---db-argument-for-cli
+<<<<<< codex/add---db-argument-for-cli
     with sqlite3.connect(args.db) as conn:
 
+
+    # Validate hours value
+    if args.hours <= 0 or args.hours > 24:
+        print('Hours must be greater than 0 and no more than 24.')
+        return
+    if args.hours * 2 != int(args.hours * 2):
+        print('Hours must be in 0.5 hour increments.')
+        return
+
+    # Validate date format and ensure it's not in the future
+    try:
+        entry_date = datetime.strptime(args.date, '%Y-%m-%d').date()
+    except ValueError:
+        print('Date must be in YYYY-MM-DD format.')
+        return
+    if entry_date > date.today():
+        print('Date cannot be in the future.')
+        return
+
+    with sqlite3.connect(DB_FILE) as conn:
+        cur = conn.cursor()
+        emp_id = get_or_create(cur, 'employees', args.employee)
+        proj_id = get_or_create(cur, 'projects', args.project)
+        cur.execute(
+            'INSERT INTO timesheets(employee_id, project_id, entry_date, hours) VALUES (?, ?, ?, ?)',
+            (emp_id, proj_id, entry_date.isoformat(), args.hours)
+        )
+        conn.commit()
+        print('Time entry recorded')
+   
         cur = conn.cursor()
         try:
             emp_id = get_or_create(cur, 'employees', args.employee)
@@ -214,9 +247,70 @@ def report(args):
             sys.exit(1)
 
 
+def _find_entry(cur, entry_id=None, employee=None, project=None, entry_date=None):
+    """Return the id of the entry matching the given criteria."""
+    if entry_id:
+        cur.execute('SELECT id FROM timesheets WHERE id = ?', (entry_id,))
+        row = cur.fetchone()
+        return row[0] if row else None
+    if employee and project and entry_date:
+        cur.execute(
+            '''SELECT t.id FROM timesheets t
+               JOIN employees e ON e.id = t.employee_id
+               JOIN projects p ON p.id = t.project_id
+               WHERE e.name = ? AND p.name = ? AND t.entry_date = ?''',
+            (employee, project, entry_date),
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+    return None
+
+
+def update_time(args):
+    with sqlite3.connect(DB_FILE) as conn:
+        cur = conn.cursor()
+        entry_id = _find_entry(
+            cur, args.id, args.employee, args.project, args.entry_date
+        )
+        if not entry_id:
+            print('Entry not found')
+            return
+        updates = []
+        params = []
+        if args.new_hours is not None:
+            updates.append('hours = ?')
+            params.append(args.new_hours)
+        if args.new_date:
+            updates.append('entry_date = ?')
+            params.append(args.new_date)
+        if not updates:
+            print('No updates specified')
+            return
+        params.append(entry_id)
+        cur.execute(
+            f'UPDATE timesheets SET {", ".join(updates)} WHERE id = ?', params
+        )
+        conn.commit()
+        print(f'Entry {entry_id} updated')
+
+
+def delete_time(args):
+    with sqlite3.connect(DB_FILE) as conn:
+        cur = conn.cursor()
+        entry_id = _find_entry(
+            cur, args.id, args.employee, args.project, args.entry_date
+        )
+        if not entry_id:
+            print('Entry not found')
+            return
+        cur.execute('DELETE FROM timesheets WHERE id = ?', (entry_id,))
+        conn.commit()
+        print(f'Entry {entry_id} deleted')
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Simple timesheet tool')
-<<<<<< codex/add---db-argument-for-cli
+<<<<< codex/add---db-argument-for-cli
     parser.add_argument(
         '--db',
         default=DEFAULT_DB_FILE,
@@ -248,12 +342,28 @@ def parse_args():
                          help='Show totals grouped by employee or date')
     sub_rep.set_defaults(func=report)
 
+    sub_upd = sub.add_parser('update', help='Update a time entry')
+    sub_upd.add_argument('--id', type=int, help='Entry ID')
+    sub_upd.add_argument('--employee', help='Employee name')
+    sub_upd.add_argument('--project', help='Project name')
+    sub_upd.add_argument('--entry-date', help='Original entry date')
+    sub_upd.add_argument('--new-hours', type=float, help='Updated hours')
+    sub_upd.add_argument('--new-date', help='Updated date')
+    sub_upd.set_defaults(func=update_time)
+
+    sub_del = sub.add_parser('delete', help='Delete a time entry')
+    sub_del.add_argument('--id', type=int, help='Entry ID')
+    sub_del.add_argument('--employee', help='Employee name')
+    sub_del.add_argument('--project', help='Project name')
+    sub_del.add_argument('--entry-date', help='Entry date')
+    sub_del.set_defaults(func=delete_time)
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-<<<<<< codex/add---db-argument-for-cli
+<<<<< codex/add---db-argument-for-cli
     init_db(args.db)
 
     if hasattr(args, 'func'):
