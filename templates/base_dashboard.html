@@ -9,13 +9,7 @@
                 <li class="nav-item"><a class="nav-link" href="#">History</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('project_master') }}">Project Master</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('user_master') }}">User Master</a></li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#reportsMenu" role="button" aria-expanded="false" aria-controls="reportsMenu">Reports</a>
-                    <ul class="nav flex-column collapse ms-3" id="reportsMenu">
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('manager_summary') }}">Project Summary</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('productivity_reports') }}">Productivity</a></li>
-                    </ul>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('reports_home') }}">Reports</a></li>
             </ul>
         </div>
     </nav>
