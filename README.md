@@ -15,6 +15,11 @@ hashed for security.
 Project managers can view project hours at `/manager/summary`. The page shows a
 bar chart of the top 10 projects by total time and includes a date range filter.
 
+There is also a **Productivity Reports** page at `/reports/productivity` which
+visualizes how employees spend time across projects and highlights top
+contributors. Overworked employees (more than 9 hours logged per day on multiple
+occasions) are flagged in a separate list.
+
 ```bash
 pip install flask
 python web_app.py

@@ -1,0 +1,95 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Productivity Reports{% endblock %}
+{% block content %}
+<h3 class="mb-4">Employee Productivity</h3>
+<form method="get" class="row g-3 mb-4">
+  <div class="col-md-3">
+    <label class="form-label">Employee</label>
+    <select name="employee" class="form-select">
+      <option value="">--All--</option>
+      {% for id, name in employees %}
+      <option value="{{ name }}" {% if employee_selected==name %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Project</label>
+    <select name="project" class="form-select">
+      <option value="">--All--</option>
+      {% for proj in projects %}
+      <option value="{{ proj }}" {% if project_selected==proj %}selected{% endif %}>{{ proj }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label">From</label>
+    <input type="date" name="start" value="{{ start }}" class="form-control">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">To</label>
+    <input type="date" name="end" value="{{ end }}" class="form-control">
+  </div>
+  <div class="col-auto align-self-end">
+    <button type="submit" class="btn btn-primary">Run</button>
+  </div>
+</form>
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div style="height:300px"><canvas id="distChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div style="height:300px"><canvas id="topChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% if overworked %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h5 class="card-title">Overworked Employees</h5>
+    <ul class="list-group">
+    {% for name in overworked %}
+      <li class="list-group-item">{{ name }}</li>
+    {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const distCtx = document.getElementById('distChart').getContext('2d');
+new Chart(distCtx, {
+  type: 'pie',
+  data: {
+    labels: {{ dist_labels|tojson }},
+    datasets: [{
+      data: {{ dist_hours|tojson }},
+      backgroundColor: [
+        '#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f',
+        '#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'
+      ]
+    }]
+  },
+  options: {responsive:true, maintainAspectRatio:false}
+});
+const topCtx = document.getElementById('topChart').getContext('2d');
+new Chart(topCtx, {
+  type: 'bar',
+  data: {
+    labels: {{ top_labels|tojson }},
+    datasets: [{
+      label: 'Hours',
+      data: {{ top_hours|tojson }},
+      backgroundColor: 'rgba(54,162,235,0.6)'
+    }]
+  },
+  options: {responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}}
+});
+</script>
+{% endblock %}
