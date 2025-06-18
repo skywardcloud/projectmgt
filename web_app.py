@@ -88,6 +88,26 @@ def log_time_entry(employee, project, hours, entry_date, remarks=None):
         return False, f'Failed to log time: {e}'
 
 
+def project_summary(start=None, end=None):
+    """Return list of (project, total_hours) tuples."""
+    with timesheet.connect_db() as conn:
+        cur = conn.cursor()
+        query = (
+            'SELECT p.name, SUM(t.hours) FROM timesheets t '
+            'JOIN projects p ON p.id = t.project_id WHERE 1=1'
+        )
+        params = []
+        if start:
+            query += ' AND t.entry_date >= ?'
+            params.append(start)
+        if end:
+            query += ' AND t.entry_date <= ?'
+            params.append(end)
+        query += ' GROUP BY p.name ORDER BY p.name'
+        cur.execute(query, params)
+        return cur.fetchall()
+
+
 def login_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -157,6 +177,33 @@ def logout():
 @login_required
 def dashboard():
     return render_template('dashboard.html', employee=session['employee'])
+
+
+@app.route('/manager/summary')
+def manager_summary():
+    start = request.args.get('start')
+    end = request.args.get('end')
+    data = project_summary(start, end)
+    return render_template('manager_summary.html', data=data, start=start, end=end)
+
+
+@app.route('/api/payroll')
+def payroll_api():
+    """Return timesheet entries in JSON for payroll systems."""
+    with timesheet.connect_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT e.name, p.name, t.entry_date, t.hours, t.remarks '
+            'FROM timesheets t '
+            'JOIN employees e ON e.id = t.employee_id '
+            'JOIN projects p ON p.id = t.project_id '
+            'ORDER BY t.entry_date'
+        )
+        rows = [
+            dict(employee=r[0], project=r[1], date=r[2], hours=r[3], remarks=r[4])
+            for r in cur.fetchall()
+        ]
+    return {'entries': rows}
 
 
 @app.route('/timesheet', methods=['GET', 'POST'])

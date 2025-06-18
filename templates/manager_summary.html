@@ -1,0 +1,10 @@
+{% extends 'index.html' %}
+{% block content %}
+<h1>Project Summary</h1>
+<table>
+  <tr><th>Project</th><th>Total Hours</th></tr>
+  {% for name, hours in data %}
+  <tr><td>{{ name }}</td><td>{{ hours }}</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
