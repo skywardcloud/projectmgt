@@ -31,6 +31,7 @@ The application groups menu links by user role. A sidebar or top bar can surface
 | `/timesheet-history` | Employee view of past time entries. |
 | `/user-master` | Admins add or edit users and project allocations. |
 | `/users` | List of all users with filters and search. |
+| `/projects` | List of projects with filters and search. |
 | `/project-master` | Admins and PMs define projects. |
 | `/project-overview` | PM view of project timelines and assignments. |
 | `/timesheet-approval` | PMs approve or reject submitted timesheets. |

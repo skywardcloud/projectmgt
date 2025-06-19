@@ -1,0 +1,82 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Projects{% endblock %}
+{% block content %}
+<h3 class="mb-4">List of Projects</h3>
+<form method="get" class="row g-3 mb-3" id="filters">
+  <div class="col-md-3">
+    <input type="text" name="q" id="search" value="{{ search }}" class="form-control" placeholder="Search name or code">
+  </div>
+  <div class="col-md-2">
+    <select name="status" class="form-select" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {% if s == selected_status %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="manager" class="form-select" onchange="this.form.submit()">
+      <option value="">All Managers</option>
+      {% for m in managers %}
+      <option value="{{ m[0] }}" {% if m[0] == selected_manager %}selected{% endif %}>{{ m[1] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="client" class="form-select" onchange="this.form.submit()">
+      <option value="">All Clients</option>
+      {% for c in clients %}
+      <option value="{{ c }}" {% if c == selected_client %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+<table class="table table-striped" id="projects-table">
+  <thead>
+    <tr>
+      <th>Project Name</th>
+      <th>Code</th>
+      <th>Manager</th>
+      <th>Start Date</th>
+      <th>End Date</th>
+      <th>Status</th>
+      <th>Est. Hours</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in projects %}
+    <tr>
+      <td>{{ p.project_name }}</td>
+      <td>{{ p.project_code }}</td>
+      <td>{{ p.manager }}</td>
+      <td>{{ p.start_date or '' }}</td>
+      <td>{{ p.end_date or '' }}</td>
+      <td>
+        <span class="badge bg-{% if p.status == 'Active' %}success{% elif p.status == 'Completed' %}secondary{% else %}warning{% endif %}">{{ p.status }}</span>
+      </td>
+      <td>{{ p.estimated_hours or '' }}</td>
+      <td>
+        <a href="{{ url_for('project_master') }}?id={{ p.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+        <a href="#" class="btn btn-sm btn-outline-secondary">View</a>
+        <a href="#" class="btn btn-sm btn-outline-danger">Archive</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<nav>
+  <ul class="pagination">
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="{{ url_for('projects', page=p, q=search, status=selected_status, manager=selected_manager, client=selected_client) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+<script>
+document.getElementById('search').addEventListener('input', function(){
+  this.form.submit();
+});
+</script>
+{% endblock %}

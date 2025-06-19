@@ -1,7 +1,10 @@
 {% extends 'base_dashboard.html' %}
 {% block title %}Project Master{% endblock %}
 {% block content %}
-<h3 class="mb-4">Project Master Entry</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="mb-0">Project Master Entry</h3>
+  <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary">Project List</a>
+</div>
 <form method="post">
   <div class="row g-3">
     <div class="col-md-6">

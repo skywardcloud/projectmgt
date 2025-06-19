@@ -102,6 +102,23 @@ def fetch_user_filter_options():
         return [], [], []
 
 
+def fetch_project_filter_options():
+    """Return distinct values for status and client from project_master."""
+    try:
+        with timesheet.connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT DISTINCT status FROM project_master ORDER BY status')
+            statuses = [r[0] for r in cur.fetchall()]
+            cur.execute(
+                'SELECT DISTINCT client_name FROM project_master '
+                'WHERE client_name IS NOT NULL ORDER BY client_name'
+            )
+            clients = [r[0] for r in cur.fetchall()]
+        return statuses, clients
+    except sqlite3.Error:
+        return [], []
+
+
 def add_project_master(data):
     """Insert a project_master record."""
     try:
@@ -617,6 +634,79 @@ def users():
         selected_department=department,
         selected_role=role,
         selected_status=status,
+    )
+
+
+@app.route('/projects')
+@login_required
+def projects():
+    """Display a paginated list of projects with filters and search."""
+    page = int(request.args.get('page', 1))
+    search = request.args.get('q', '').strip()
+    status = request.args.get('status', '')
+    manager = request.args.get('manager', '')
+    client = request.args.get('client', '')
+
+    statuses, clients = fetch_project_filter_options()
+    managers = fetch_managers()
+
+    base = (
+        'FROM project_master pm LEFT JOIN users u ON pm.manager_id = u.id WHERE 1=1'
+    )
+    params = []
+    if status:
+        base += ' AND pm.status = ?'
+        params.append(status)
+    if manager:
+        base += ' AND pm.manager_id = ?'
+        params.append(manager)
+    if client:
+        base += ' AND pm.client_name = ?'
+        params.append(client)
+    if search:
+        base += ' AND (pm.project_name LIKE ? OR pm.project_code LIKE ?)'
+        params.extend([f"%{search}%", f"%{search}%"])
+
+    per_page = 10
+    with timesheet.connect_db() as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT COUNT(*) ' + base, params)
+        total = cur.fetchone()[0]
+
+        cur.execute(
+            'SELECT pm.id, pm.project_name, pm.project_code, '
+            'u.full_name, pm.start_date, pm.end_date, pm.status, pm.estimated_hours '
+            + base +
+            ' ORDER BY pm.project_name LIMIT ? OFFSET ?',
+            params + [per_page, (page - 1) * per_page],
+        )
+        rows = [
+            dict(
+                id=r[0],
+                project_name=r[1],
+                project_code=r[2],
+                manager=r[3],
+                start_date=r[4],
+                end_date=r[5],
+                status=r[6],
+                estimated_hours=r[7],
+            )
+            for r in cur.fetchall()
+        ]
+
+    total_pages = (total + per_page - 1) // per_page
+    return render_template(
+        'project_list.html',
+        projects=rows,
+        page=page,
+        total_pages=total_pages,
+        search=search,
+        statuses=statuses,
+        managers=managers,
+        clients=clients,
+        selected_status=status,
+        selected_manager=int(manager) if manager else '',
+        selected_client=client,
     )
 
 
