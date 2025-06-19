@@ -77,5 +77,39 @@ class ProjectsPageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Sample Project', response.data)
 
+
+class TimesheetDropdownTests(unittest.TestCase):
+    def setUp(self):
+        app.config['TESTING'] = True
+        self.client = app.test_client()
+
+        with app.app_context():
+            with timesheet.connect_db() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO users (full_name, email, username, password, department, role, status) "
+                    "VALUES ('Employee', 'emp@example.com', 'emp', 'x', 'IT', 'Employee', 'Active')"
+                )
+                cur.execute(
+                    "INSERT INTO users (full_name, email, username, password, department, role, status) "
+                    "VALUES ('Manager2', 'mgr2@example.com', 'manager2', 'x', 'IT', 'Project Manager', 'Active')"
+                )
+                manager_id = cur.lastrowid
+                cur.execute(
+                    "INSERT INTO project_master (project_name, project_code, manager_id, status) "
+                    "VALUES ('Dropdown Project', 'DP001', ?, 'Active')",
+                    (manager_id,),
+                )
+                conn.commit()
+
+    def test_timesheet_dropdown_includes_project_master_entries(self):
+        with self.client.session_transaction() as sess:
+            sess['employee'] = 'Employee'
+            sess['role'] = 'Employee'
+
+        response = self.client.get('/timesheet')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Dropdown Project', response.data)
+
 if __name__ == '__main__':
     unittest.main()
