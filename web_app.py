@@ -28,7 +28,12 @@ def fetch_projects():
     try:
         with timesheet.connect_db() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT name FROM projects ORDER BY name')
+            # Include project names from both the legacy ``projects`` table
+            # and the newer ``project_master`` table to ensure dropdowns
+            # show all available projects.
+            cur.execute(
+                "SELECT name FROM projects UNION SELECT project_name FROM project_master ORDER BY 1"
+            )
             return [row[0] for row in cur.fetchall()]
     except sqlite3.Error:
         return []
