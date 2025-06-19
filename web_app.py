@@ -23,32 +23,6 @@ app.secret_key = 'secret-key'
 timesheet.init_db()
 
 
-def add_employee(name):
-    try:
-        with timesheet.connect_db() as conn:
-            cur = conn.cursor()
-            _, created = timesheet.get_or_create(cur, 'employees', name)
-            if created:
-                conn.commit()
-                return True, f"Employee '{name}' added"
-            return False, f"Employee '{name}' already exists"
-    except sqlite3.Error as e:
-        return False, f"Failed to add employee: {e}"
-
-
-def add_project(name):
-    try:
-        with timesheet.connect_db() as conn:
-            cur = conn.cursor()
-            _, created = timesheet.get_or_create(cur, 'projects', name)
-            if created:
-                conn.commit()
-                return True, f"Project '{name}' added"
-            return False, f"Project '{name}' already exists"
-    except sqlite3.Error as e:
-        return False, f"Failed to add project: {e}"
-
-
 def fetch_projects():
     """Return a list of all project names ordered alphabetically."""
     try:
@@ -75,12 +49,15 @@ def fetch_managers():
         return []
 
 
-def fetch_employees():
-    """Return list of (id, name) for all employees."""
+def fetch_users():
+    """Return list of (id, full_name) for active users."""
     try:
         with timesheet.connect_db() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT id, name FROM employees ORDER BY name')
+            cur.execute(
+                "SELECT id, full_name FROM users "
+                "WHERE status = 'Active' ORDER BY full_name"
+            )
             return cur.fetchall()
     except sqlite3.Error:
         return []
@@ -290,38 +267,13 @@ def login_required(func):
 
 
 
-@app.route('/employee', methods=['GET', 'POST'])
-def employee():
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        if not name:
-            flash('Employee name is required', 'error')
-        else:
-            ok, msg = add_employee(name)
-            flash(msg, 'success' if ok else 'error')
-            if ok:
-                return redirect(url_for('employee'))
-    return render_template('employee_form.html')
 
-
-@app.route('/project', methods=['GET', 'POST'])
-def project():
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        if not name:
-            flash('Project name is required', 'error')
-        else:
-            ok, msg = add_project(name)
-            flash(msg, 'success' if ok else 'error')
-            if ok:
-                return redirect(url_for('project'))
-    return render_template('project_form.html')
 
 
 @app.route('/project-master', methods=['GET', 'POST'])
 def project_master():
     managers = fetch_managers()
-    employees = fetch_employees()
+    employees = fetch_users()
     if request.method == 'POST':
         form = request.form
         data = {
@@ -413,7 +365,7 @@ def dashboard():
         if role == 'Admin':
             cur.execute('SELECT COUNT(*) FROM projects')
             projects = cur.fetchone()[0]
-            cur.execute('SELECT COUNT(*) FROM employees')
+            cur.execute('SELECT COUNT(*) FROM users')
             employees = cur.fetchone()[0]
             cur.execute('SELECT COUNT(*) FROM timesheets WHERE entry_date = ?', (today,))
             today_entries = cur.fetchone()[0]
@@ -485,7 +437,7 @@ def productivity_reports():
     employee = request.args.get('employee')
     project = request.args.get('project')
 
-    employees = fetch_employees()
+    employees = fetch_users()
     projects = fetch_projects()
 
     dist_labels, dist_hours = [], []
