@@ -12,11 +12,9 @@ The application groups menu links by user role. A sidebar or top bar can surface
 - **Timesheet History** → `/timesheet-history`
 
 ### For Admin / HR
-- **User Master** → `/user-master`
-- **User List** → `/users`
+- **User Master** → `/user-master` (includes a link to the User List page)
 - **Project Master** → `/project-master`
 - **Project Assignment** → `/project-assignment` (optional)
-- **Reports** → `/reports`
 - **Settings** → `/settings`
 
 ### For Project Manager
@@ -37,7 +35,6 @@ The application groups menu links by user role. A sidebar or top bar can surface
 | `/project-overview` | PM view of project timelines and assignments. |
 | `/timesheet-approval` | PMs approve or reject submitted timesheets. |
 | `/team-utilization` | PMs review team workload. |
-| `/reports` | Landing page for all reports. |
 | `/reports/summary` | Project hours chart. |
 | `/reports/productivity` | Employee productivity charts. |
 | `/settings` | Configure cutoffs, working hours, and holidays. |
